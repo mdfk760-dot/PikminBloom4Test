@@ -826,8 +826,15 @@
       </div>
     </section>
 
-    <section id="cards" class="cards"></section>
-    <div id="empty" class="empty">目前沒有符合條件的開花公告。</div>
+<div id="loadingMessage" class="empty" style="display:block;">
+  🌱 皮克敏正在搬運花田資料，請稍後
+</div>
+
+<section id="cards" class="cards"></section>
+
+<div id="empty" class="empty">
+  目前沒有符合條件的開花公告。
+</div>
   </main>
 
   <footer class="page-footer-note">本頁面僅透過妖妖本人分享於【疲勞部私人群組】、【皮克敏飛人交流群】、【pikmin bloom皮皮之家】，並無授權其他社群使用。</footer>
@@ -1789,22 +1796,35 @@ ${trkptContent}
     let isLoadingReports = false;
     let lastReportsRefreshAt = 0;
 
-    async function refreshReports({ force = false } = {}) {
-      // 頁面位於背景時停止呼叫 Google Apps Script API。
-      if (!force && document.visibilityState !== "visible") return;
+   async function refreshReports({ force = false } = {}) {
+  if (!force && document.visibilityState !== "visible") return;
 
-      // 避免前一次讀取尚未完成時，又送出下一個重複請求。
-      if (isLoadingReports) return;
+  if (isLoadingReports) return;
 
-      isLoadingReports = true;
-      try {
-        await loadReports();
-        lastReportsRefreshAt = Date.now();
-        renderReports();
-      } finally {
-        isLoadingReports = false;
-      }
+  isLoadingReports = true;
+
+  const loading = $("loadingMessage");
+
+  if (loading) {
+    loading.style.display = "block";
+    loading.textContent =
+      "🌱 皮克敏正在搬運花田資料，請稍後";
+  }
+
+  try {
+    await loadReports();
+
+    lastReportsRefreshAt = Date.now();
+
+    renderReports();
+
+    if (loading) {
+      loading.style.display = "none";
     }
+  } finally {
+    isLoadingReports = false;
+  }
+}
 
     function stopReportsRefreshTimer() {
       if (refreshTimer !== null) {
