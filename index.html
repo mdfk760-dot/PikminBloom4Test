@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>妖妖開花公告</title>
+  <meta name="description" content="妖妖開花公告｜查看最新開花預報、可收果花田與座標資訊。">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="妖妖開花公告">
+  <meta property="og:description" content="查看最新開花預報、可收果花田與座標資訊。">
+  <meta property="og:url" content="https://mdfk760-dot.github.io/PikminBooom/">
+
+  <style>
+	  
+    :root {
+      --bg: #fff8f2;
+      --card: #ffffff;
+      --text: #3d332d;
+      --muted: #8a7b70;
+      --primary: #ef7d9b;
+      --primary-dark: #d95f83;
+      --green: #75ad79;
+      --green-dark: #5d9863;
+      --border: #f0ded3;
+      --danger: #d9534f;
+      --danger-dark: #bd403d;
+      --shadow: 0 12px 30px rgba(112, 79, 61, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 214, 226, 0.72), transparent 34%),
+        radial-gradient(circle at bottom right, rgba(204, 239, 203, 0.7), transparent 32%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 28px 16px 18px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(26px, 5vw, 42px);
+      letter-spacing: 0.04em;
+    }
+
+    header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .wrap {
+      width: min(1160px, calc(100% - 28px));
+      margin: 0 auto 44px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar,
+    .panel,
+    .card,
+    .empty {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+    }
+
+    .topbar {
+      padding: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .search-area {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(239, 125, 155, 0.14);
+    }
+
+    #keyword {
+      min-width: 220px;
+      flex: 1;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 10px 14px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button.secondary { background: #a99586; }
+    button.secondary:hover { background: #8c7a6d; }
+    button.green { background: var(--green); }
+    button.green:hover { background: var(--green-dark); }
+    button.danger { background: var(--danger); }
+    button.danger:hover { background: var(--danger-dark); }
+	button.download { background: #4f8edc; }
+	button.download:hover { background: #4f8edc; }
+	
+    button.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    button.ghost:hover {
+      background: #fff8f2;
+      color: var(--text);
+    }
+
+    .-panel {
+      display: none;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .-panel.active { display: block; }
+
+    .-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 240, 245, 0.72);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .-panel-header:hover .-panel-title,
+    .-panel-header:hover .admin-collapse-btn {
+      filter: brightness(0.95);
+    }
+
+    .admin-panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--primary-dark);
+    }
+
+    .admin-collapse-btn {
+      width: auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      color: var(--primary-dark) !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      font-size: 18px !important;
+      line-height: 1 !important;
+      pointer-events: none;
+    }
+
+    .admin-collapse-btn:hover {
+      background: transparent !important;
+      transform: none !important;
+    }
+
+    .admin-panel-body {
+      padding: 18px;
+    }
+
+    .admin-panel.collapsed .admin-panel-body {
+      display: none;
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+    .field.half { grid-column: span 1; }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 6px 4px;
+      font-weight: 700;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    textarea.coords-box {
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .cards {
+      display: block;
+    }
+
+    .result-table {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: var(--shadow);
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: minmax(85px, 0.65fr) minmax(145px, 1.15fr) minmax(115px, 0.9fr) minmax(160px, 1.35fr) 68px minmax(390px, 2.35fr);
+      gap: 0;
+      align-items: stretch;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-row:last-child {
+      border-bottom: 0;
+    }
+
+    /* 桌機版可收果區域：只微縮備註欄，操作欄剛好容納 4 個一般按鈕 */
+    .active-table .result-row {
+      grid-template-columns: minmax(85px, 0.65fr) minmax(145px, 1.15fr) minmax(115px, 0.9fr) minmax(125px, 1.05fr) 68px minmax(440px, 2.75fr);
+    }
+
+    .active-table .row-actions {
+      gap: 6px;
+    }
+
+    .active-table .row-actions > button {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 8px 8px;
+      font-size: 12px;
+    }
+
+    .result-header {
+      background: #fff0f5;
+      color: var(--primary-dark);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .result-cell {
+      padding: 12px 10px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      word-break: break-word;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .result-cell:last-child {
+      border-right: 0;
+    }
+
+    .result-place {
+      font-weight: 900;
+      font-size: 16px;
+    }
+
+    .result-flower {
+      font-weight: 800;
+    }
+
+    .result-count {
+      justify-content: flex-end;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .mobile-label {
+      display: none;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 7px;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .row-actions button {
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
+    .admin-actions {
+      display: none;
+      flex-wrap: nowrap;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    body.admin-on .admin-actions {
+      display: flex;
+    }
+
+
+    .result-section-title {
+      margin: 18px 4px 10px;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-section-title .sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .preview-row {
+      grid-template-columns: minmax(160px, 1.45fr) minmax(140px, 1fr) minmax(140px, 1fr) minmax(170px, 1.15fr);
+    }
+
+    .preview-status {
+      color: var(--primary-dark);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .expired-table {
+      opacity: 0.78;
+    }
+
+    .expired-row {
+      grid-template-columns: minmax(85px, 0.65fr) minmax(145px, 1.15fr) minmax(115px, 0.9fr) minmax(260px, 2fr) minmax(210px, 1.25fr);
+    }
+
+    .expired-status {
+      color: var(--danger);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--muted);
+      display: none;
+    }
+
+    .page-footer-note {
+      width: min(1160px, calc(100% - 28px));
+      margin: -24px auto 34px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      letter-spacing: 0.02em;
+    }
+
+    dialog {
+      position: relative;
+      border: 0;
+      border-radius: 20px;
+      padding: 24px 20px 20px;
+      width: min(420px, calc(100% - 36px));
+      box-shadow: var(--shadow);
+    }
+
+    dialog::backdrop { background: rgba(40, 28, 20, 0.35); }
+
+    #closeLoginBtn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 36px !important;
+      height: 36px;
+      padding: 0;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    #closeLoginBtn:hover {
+      background: #fff8f2;
+      color: var(--text);
+      transform: none;
+    }
+
+    .small-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .small-row input { flex: 1; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(61, 51, 45, 0.94);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 50;
+      font-size: 14px;
+    }
+
+    .toast.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+
+
+    .notice-float {
+      position: fixed;
+      right: 18px;
+      bottom: 84px;
+      z-index: 40;
+      width: min(320px, calc(100% - 32px));
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      padding: 14px 16px;
+      color: var(--text);
+      backdrop-filter: blur(10px);
+    }
+
+    .notice-float-title {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--primary-dark);
+      letter-spacing: 0.03em;
+    }
+
+    .notice-float-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 800;
+    }
+
+    .notice-float-list .no {
+      color: var(--danger);
+    }
+
+    .notice-float-list .yes {
+      color: var(--green-dark);
+    }
+
+    @media (max-width: 1024px) {
+      header {
+        padding: 18px 12px 10px;
+      }
+
+      header h1 {
+        font-size: 24px;
+      }
+
+      header p {
+        font-size: 13px;
+      }
+
+      .wrap {
+        width: min(100% - 20px, 760px);
+        gap: 14px;
+        margin-bottom: 28px;
+      }
+
+      .admin-grid { grid-template-columns: 1fr; }
+      .field.half { grid-column: 1 / -1; }
+      .topbar { align-items: stretch; }
+      .search-area,
+      .topbar > button { width: 100%; }
+
+      /* 手機版隱藏「全部花種（可輸入搜尋）」欄位 */
+      #flowerFilter {
+        display: none;
+      }
+      button { width: 100%; }
+      .actions button,
+      .small-row button { width: auto; }
+      .small-row { flex-direction: column; }
+      .small-row button { width: 100%; }
+
+      .result-section-title {
+        margin: 16px 4px 8px;
+        font-size: 20px;
+        line-height: 1.35;
+        display: block;
+      }
+
+      .result-section-title .sub {
+        display: block;
+        margin-top: 3px;
+        font-size: 13px;
+      }
+
+      .result-table {
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+        border: 0;
+        display: grid;
+        gap: 12px;
+      }
+
+      .result-row.result-header {
+        display: none !important;
+      }
+
+      .result-row,
+      .expired-row {
+        display: grid;
+        grid-template-columns: 1fr !important;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: var(--shadow);
+      }
+
+      .result-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+        padding: 12px 14px;
+        min-height: 48px;
+      }
+
+      .result-cell:last-child {
+        border-bottom: 0;
+      }
+
+      .result-place {
+        font-size: 19px;
+      }
+
+      .result-flower {
+        font-size: 17px;
+      }
+
+      .result-count {
+        justify-content: flex-start;
+      }
+
+      .mobile-label {
+        display: inline-block;
+        width: 48px;
+        flex: 0 0 48px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 900;
+        margin-right: 0;
+      }
+
+      .row-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .row-actions button,
+      .admin-actions button {
+        width: 100%;
+        padding: 10px 8px;
+        font-size: 14px;
+      }
+
+      /* 可收果區域：四個一般操作按鈕在手機版固定同一行 */
+      .active-table .row-actions {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .active-table .row-actions > button {
+        padding: 10px 3px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .active-table .admin-actions {
+        grid-column: 1 / -1;
+      }
+
+      .admin-actions {
+        display: none;
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+      }
+
+      body.admin-on .admin-actions {
+        display: grid;
+      }
+
+      .expired-status {
+        grid-column: 1 / -1;
+        padding: 4px 0;
+      }
+
+      .notice-float {
+        left: auto;
+        right: 10px;
+        bottom: 78px;
+        width: fit-content;
+        max-width: calc(100% - 20px);
+        border-radius: 18px;
+        padding: 12px 14px;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .notice-float.dragging {
+        cursor: grabbing;
+        transition: none;
+      }
+
+      .notice-float-title {
+        font-size: 14px;
+      }
+
+      .notice-float-list {
+        font-size: 13px;
+        gap: 5px;
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌸 妖妖開花公告</h1>
+    <p>Admin 分享開花成果，User 一鍵複製座標。</p>
+  </header>
+
+  <main class="wrap">
+    <section class="topbar">
+      <div class="search-area">
+        <input id="keyword" type="search" placeholder="搜尋地點、花色、花種、備註…" />
+        <select id="colorFilter">
+          <option value="">全部花色</option>
+        </select>
+        <input id="flowerFilter" type="search" list="flowerFilterList" placeholder="全部花種（可輸入搜尋）" autocomplete="off" />
+        <datalist id="flowerFilterList"></datalist>
+      </div>
+      <button id="adminLoginBtn" class="secondary">Admin登入</button>
+      <button id="logoutBtn" class="ghost" style="display:none;">Admin登出</button>
+    </section>
+
+    <section id="adminPanel" class="panel admin-panel">
+      <div id="adminPanelHeader" class="admin-panel-header" role="button" tabindex="0" aria-expanded="true" aria-controls="adminPanelBody">
+        <h2 class="admin-panel-title">Admin 管理區</h2>
+        <button id="adminCollapseBtn" class="admin-collapse-btn" type="button" tabindex="-1" aria-hidden="true">▲</button>
+      </div>
+
+      <div id="adminPanelBody" class="admin-panel-body">
+      <div class="admin-grid">
+        <div class="field half">
+          <label for="rawInput">貼上內容</label>
+          <textarea id="rawInput" placeholder="例如：
+&quot;妖妖C左
+🌸紅色菊花25株
+⏰5/26 12:05
+📝隨意收&quot;"></textarea>
+        </div>
+
+        <div class="field half">
+          <label for="coordsInput">貼上座標</label>
+          <textarea id="coordsInput" class="coords-box" placeholder="例如：
+25.000000,121.000000
+25.000001,121.000001
+25.000002,121.000002"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="placeInput">地點 / 花田名稱</label>
+          <input id="placeInput" type="text" placeholder="例如：妖妖C左" />
+        </div>
+
+        <div class="field">
+          <label for="timeInput">開花時間</label>
+          <input id="timeInput" type="text" placeholder="例如：5/26 12:05" />
+        </div>
+
+        <div class="field">
+          <label for="colorInput">花朵顏色</label>
+          <select id="colorInput"></select>
+        </div>
+
+        <div class="field">
+          <label for="flowerInput">花朵種類</label>
+          <input id="flowerInput" type="search" list="flowerInputList" placeholder="輸入或選擇花種" autocomplete="off" />
+          <datalist id="flowerInputList"></datalist>
+        </div>
+
+        <div class="field">
+          <label for="amountInput">株數（自動等於座標數量）</label>
+          <input id="amountInput" type="number" min="0" placeholder="依座標數量自動計算" readonly />
+        </div>
+
+        <div class="field">
+          <label for="noteInput">備註</label>
+          <input id="noteInput" type="text" placeholder="例如：隨意收" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="parseBtn" class="green">從公告文字自動解析</button>
+        <button id="saveBtn">新增 / 更新公告</button>
+        <button id="clearFormBtn" class="ghost">清空輸入</button>
+        <button id="deleteAllBtn" class="danger">刪除全部公告</button>
+      </div>
+
+      <div class="hint">
+        管理密碼已改由 Google Apps Script 驗證，HTML 不再保存管理密碼。<br />
+        目前資料會寫入 Google Spreadsheet，所有使用者會讀取同一份公告資料。
+      </div>
+      </div>
+    </section>
+
+    <section id="cards" class="cards"></section>
+    <div id="empty" class="empty">目前沒有符合條件的開花公告。</div>
+  </main>
+
+  <footer class="page-footer-note">本頁面僅透過妖妖本人分享於【疲勞部私人群組】、【皮克敏飛人交流群】、【pikmin bloom皮皮之家】，並無授權其他社群使用。</footer>
+
+  <dialog id="loginDialog">
+    <button id="closeLoginBtn" type="button" aria-label="關閉登入視窗" title="關閉">&times;</button>
+    <h3 style="margin:0 44px 0 0;">Admin 管理登入</h3>
+    <p style="color:var(--muted);line-height:1.6;">只有管理員才可以登入，請按右上角叉叉返回，別再問我密碼。</p>
+    <div class="small-row">
+      <input id="passwordInput" type="password" placeholder="管理密碼" />
+      <button id="confirmLoginBtn">登入</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+
+  <aside class="notice-float" aria-label="收果提醒事項">
+    <p class="notice-float-title">收果提醒</p>
+    <ul class="notice-float-list">
+      <li class="no">✗ 請勿轉傳 &amp; 請勿偷田</li>
+      <li class="no">✗ 請勿踩踏沒有提供的座標</li>
+      <li class="no">✗ 收果後請刪檔避免開錯檔誤踩</li>
+      <li class="yes">✓ 開花後僅第𝟏小時會有果實</li>
+      <li class="yes">✓ 花瓣不夠可只派𝟏皮種花</li>
+    </ul>
+  </aside>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbzpugfRUGMJ1fAM-c1jTX3ig6NG1MbmEPWKft7IxxIQ2hJVe3WiL8mO-_eKa3EfP9xg/exec";
+
+    const COLORS = ["混色", "黃色", "紅色", "藍色", "白色"];
+    const FLOWERS = [
+      "雜田","三色堇", "玫瑰", "聖誕紅", "山茶花", "梅花", "櫻花", "鬱金香", "康乃馨", "繡球花", "百合",
+      "向日葵", "彼岸花", "大波斯菊", "兔耳花", "水仙花", "銀蓮花", "粉蝶花", "海芋", "雞蛋花", "扶桑花",
+      "石竹", "龍膽", "菊花", "聖誕玫瑰", "嘉德麗雅蘭", "風信子", "豌豆花", "鈴蘭", "牡丹", "睡蓮",
+      "牽牛花", "九重葛", "大理花", "鐵線蓮", "雪花蓮", "小蒼蘭", "油菜花", "週年玫瑰", "鳶尾花", "天堂鳥",
+      "雞冠花", "萬壽菊", "鼠尾草", "櫻草花", "蝴蝶蘭", "金魚草", "矮牽牛", "鸚鵡鬱金香", "勿忘草", "風鈴草", "曇花","美人蕉"
+    ];
+
+    let reports = [];
+    let editingId = null;
+    let adminPassword = sessionStorage.getItem("pikminAdminPassword") || "";
+    let isAdmin = sessionStorage.getItem("pikminAdmin") === "true" && !!adminPassword;
+    let toastTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function showToast(message) {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.classList.add("active");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("active"), 1600);
+    }
+
+    function fillOptions() {
+      for (const color of COLORS) {
+        $("colorInput").append(new Option(color, color));
+        $("colorFilter").append(new Option(color, color));
+      }
+
+      for (const flower of FLOWERS) {
+        $("flowerInputList").append(new Option(flower, flower));
+        $("flowerFilterList").append(new Option(flower, flower));
+      }
+    }
+
+    function cleanSpreadsheetText(text) {
+      return String(text || "")
+        .trim()
+        .replace(/^"+|"+$/g, "")
+        .replace(/""/g, '"')
+        .replace(/\r\n/g, "\n")
+        .trim();
+    }
+
+    function cleanCoordsText(text) {
+      return cleanSpreadsheetText(text)
+        .split("\n")
+        .map(line => line.trim().replace(/^"+|"+$/g, ""))
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    function getCoordCount(text) {
+      const cleaned = cleanCoordsText(text);
+      return cleaned ? cleaned.split("\n").filter(Boolean).length : 0;
+    }
+
+    function syncAmountWithCoords() {
+      $("amountInput").value = getCoordCount($("coordsInput").value) || "";
+    }
+
+    function normalizeFlowerText(value) {
+      return String(value || "")
+        .normalize("NFKC")
+        .replace(/[🌸🌼🌺💐]/gu, "")
+        .replace(/\d+\s*株/gu, "")
+        .replace(/[「」『』【】()（）\[\]：:，,。.!！?？\s]/gu, "")
+        .trim();
+    }
+
+    function detectFlowerName(flowerLine, detectedColor = "") {
+      let flowerText = normalizeFlowerText(flowerLine);
+
+      // 先移除已辨識的花色，避免顏色文字干擾花名判定。
+      if (detectedColor && flowerText.startsWith(detectedColor)) {
+        flowerText = flowerText.slice(detectedColor.length);
+      }
+
+      // 關鍵：花名由長到短比對，避免「聖誕玫瑰／週年玫瑰」被先判成「玫瑰」。
+      const flowersByLength = [...FLOWERS].sort((a, b) => b.length - a.length);
+
+      return flowersByLength.find(flower => {
+        const normalizedFlower = normalizeFlowerText(flower);
+        return flowerText === normalizedFlower || flowerText.startsWith(normalizedFlower);
+      }) || flowersByLength.find(flower => flowerText.includes(normalizeFlowerText(flower))) || "";
+    }
+
+    function parseReportText(text) {
+      const cleaned = cleanSpreadsheetText(text);
+      const lines = cleaned.split("\n").map(line => line.trim()).filter(Boolean);
+      const firstLine = lines[0] || "";
+      const flowerLine = lines.find(line => line.includes("🌸")) || "";
+      const timeLine = lines.find(line => line.includes("⏰")) || "";
+      const noteLine = lines.find(line => line.includes("📝")) || "";
+
+      const normalizedFlowerLine = normalizeFlowerText(flowerLine);
+      const color = COLORS
+        .filter(c => c !== "混色")
+        .sort((a, b) => b.length - a.length)
+        .find(c => normalizedFlowerLine.startsWith(c) || normalizedFlowerLine.includes(c)) ||
+        (normalizedFlowerLine.includes("混色") ? "混色" : "");
+      const flower = detectFlowerName(flowerLine, color);
+      const amountMatch = flowerLine.match(/(\d+)\s*株/);
+      const timeMatch = timeLine.match(/(\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2})/);
+
+      return {
+        place: firstLine,
+        color,
+        flower,
+        amount: amountMatch ? amountMatch[1] : "",
+        time: timeMatch ? timeMatch[1] : timeLine.replace("⏰", "").trim(),
+        note: noteLine.replace("📝", "").trim(),
+        raw: cleaned
+      };
+    }
+
+    async function loadReports() {
+      try {
+        const res = await fetch(`${API_URL}?action=list&ts=${Date.now()}`);
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.message || "讀取資料失敗");
+        }
+
+        reports = data.reports || [];
+      } catch (error) {
+        console.error(error);
+        reports = [];
+        showToast("讀取 Google Sheet 失敗");
+      }
+    }
+
+    async function verifyAdminPassword(password) {
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "verify",
+            adminPassword: password
+          })
+        });
+
+        const data = await res.json();
+        return !!data.success;
+      } catch (error) {
+        console.error(error);
+        alert("無法驗證管理密碼，請確認 Apps Script 已重新部署，且存取權限為任何人。");
+        return false;
+      }
+    }
+
+    async function saveReportToSheet(report) {
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "save",
+            adminPassword,
+            report
+          })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          alert(data.message || "儲存失敗");
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error(error);
+        alert("儲存失敗，請確認 Apps Script 已部署為 Web App，且存取權限為任何人。");
+        return false;
+      }
+    }
+
+    async function deleteReportFromSheet(id) {
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "delete",
+            adminPassword,
+            id
+          })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          alert(data.message || "刪除失敗");
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        console.error(error);
+        alert("刪除失敗，請確認 Apps Script 已部署為 Web App，且存取權限為任何人。");
+        return false;
+      }
+    }
+
+    function setAdminPanelCollapsed(collapsed) {
+      const panel = $("adminPanel");
+      panel.classList.toggle("collapsed", collapsed);
+      $("adminPanelHeader").setAttribute("aria-expanded", collapsed ? "false" : "true");
+      $("adminCollapseBtn").textContent = collapsed ? "▼" : "▲";
+      sessionStorage.setItem("pikminAdminPanelCollapsed", collapsed ? "true" : "false");
+    }
+
+    function setAdminMode(value) {
+      isAdmin = value;
+      sessionStorage.setItem("pikminAdmin", value ? "true" : "false");
+      document.body.classList.toggle("admin-on", value);
+      $("adminPanel").classList.toggle("active", value);
+      $("adminLoginBtn").style.display = value ? "none" : "inline-block";
+      $("logoutBtn").style.display = value ? "inline-block" : "none";
+      if (value) {
+        setAdminPanelCollapsed(sessionStorage.getItem("pikminAdminPanelCollapsed") === "true");
+      }
+      renderReports();
+    }
+
+    function normalizeFlowerName(value) {
+      return String(value || "")
+        .normalize("NFKC")
+        .replace(/[\s　]+/g, "")
+        .trim();
+    }
+
+    function getCanonicalFlowerName(value) {
+      const normalizedValue = normalizeFlowerName(value);
+      if (!normalizedValue) return "";
+
+      return FLOWERS.find(flower => normalizeFlowerName(flower) === normalizedValue) || "";
+    }
+
+    function validateFlowerInput(showAlert = false) {
+      const input = $("flowerInput");
+      const typedValue = input.value;
+      const canonicalFlower = getCanonicalFlowerName(typedValue);
+      const isValid = canonicalFlower !== "";
+
+      input.setCustomValidity(isValid ? "" : "花朵種類必須是清單中的完整花名");
+
+      if (isValid) {
+        // 統一寫回清單中的標準名稱，避免全形空白或 Unicode 字形差異。
+        input.value = canonicalFlower;
+      } else if (showAlert) {
+        const displayValue = typedValue.trim();
+        alert(displayValue
+          ? `「${displayValue}」不是有效花種。花朵種類必須從清單中選擇完整花名。`
+          : "請輸入或選擇花朵種類。");
+        input.focus();
+        input.select();
+      }
+
+      return isValid;
+    }
+
+    function getFormData() {
+      const raw = cleanSpreadsheetText($("rawInput").value);
+      return {
+        id: editingId || crypto.randomUUID(),
+        place: $("placeInput").value.trim(),
+        color: $("colorInput").value,
+        flower: $("flowerInput").value.trim(),
+        amount: String(getCoordCount($("coordsInput").value)),
+        time: $("timeInput").value.trim(),
+        note: $("noteInput").value.trim(),
+        raw,
+        coords: cleanCoordsText($("coordsInput").value),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function setFormData(report) {
+      editingId = report.id;
+      $("rawInput").value = report.raw || "";
+      $("coordsInput").value = report.coords || "";
+      $("placeInput").value = report.place || "";
+      $("colorInput").value = report.color || COLORS[0];
+      $("flowerInput").value = report.flower || "";
+      $("amountInput").value = report.coords ? getCoordCount(report.coords) : (report.amount || "");
+      $("timeInput").value = formatDisplayTime(report.time) || "";
+      $("noteInput").value = report.note || "";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function clearForm() {
+      editingId = null;
+      $("rawInput").value = "";
+      $("coordsInput").value = "";
+      $("placeInput").value = "";
+      $("timeInput").value = "";
+      $("amountInput").value = "";
+      $("noteInput").value = "";
+      $("colorInput").value = COLORS[0];
+      $("flowerInput").value = "";
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    const COPY_NOTICE_TEXT = [
+      "收果提醒",
+      "✗ 請勿轉傳 & 請勿偷田",
+      "✗ 請勿踩踏沒有提供的座標",
+      "✗ 收果後請刪檔避免開錯檔誤踩",
+      "✓ 開花後僅第𝟏小時會有果實",
+      "✓ 花瓣不夠可只派𝟏皮種花",
+      "https://mdfk760-dot.github.io/PikminBooom/"
+    ].join("\n");
+
+    function removeCopyNoticeFooter(text) {
+      return String(text || "")
+        .replace(/\n{0,2}收果提醒[\s\S]*$/u, "")
+        .trim();
+    }
+
+    function buildCopyContent(report) {
+      const base = removeCopyNoticeFooter(buildDisplayText(report));
+      return `${base}\n\n${COPY_NOTICE_TEXT}`.trim();
+    }
+
+    function buildDisplayText(report) {
+      if (report.raw) {
+        const coordCount = report.coords ? report.coords.split("\n").filter(Boolean).length : Number(report.amount || 0);
+        return report.raw.replace(/(🌸[^\n]*?)(\d+)\s*株/, `$1${coordCount}株`);
+      }
+      return `${report.place}\n🌸${report.color}${report.flower}${report.amount ? report.amount + "株" : ""}\n⏰${formatDisplayTime(report.time)}\n📝${report.note}`.trim();
+    }
+
+    function pad2(value) {
+      return String(value).padStart(2, "0");
+    }
+
+    function formatDisplayTime(timeText) {
+      const value = String(timeText || "").trim();
+      if (!value) return "";
+
+      const normalMatch = value.match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+      if (normalMatch) {
+        return `${Number(normalMatch[1])}/${Number(normalMatch[2])} ${pad2(Number(normalMatch[3]))}:${normalMatch[4]}`;
+      }
+
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) {
+        return `${date.getMonth() + 1}/${date.getDate()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+      }
+
+      return value;
+    }
+
+    function parseOpeningDate(timeText) {
+      const value = String(timeText || "").trim();
+      if (!value) return null;
+
+      const dateFromSheet = new Date(value);
+      if (!Number.isNaN(dateFromSheet.getTime()) && /\d{4}-\d{2}-\d{2}T/.test(value)) {
+        return dateFromSheet;
+      }
+
+      const displayValue = formatDisplayTime(value);
+      const match = displayValue.match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+      if (!match) return null;
+
+      const now = new Date();
+      const month = Number(match[1]);
+      const day = Number(match[2]);
+      const hour = Number(match[3]);
+      const minute = Number(match[4]);
+      const openedAt = new Date(now.getFullYear(), month - 1, day, hour, minute, 0, 0);
+
+      if (openedAt.getTime() - now.getTime() > 180 * 24 * 60 * 60 * 1000) {
+        openedAt.setFullYear(openedAt.getFullYear() - 1);
+      }
+
+      return openedAt;
+    }
+
+    const FRUIT_AVAILABLE_MINUTES = 60;
+
+    function getReportCoordCount(report) {
+      if (report.coords) return report.coords.split("\n").filter(Boolean).length;
+      return Number(report.amount || 0);
+    }
+
+    function getPreviewCompleteMinutes(report) {
+      const coordCount = getReportCoordCount(report);
+
+      // 預計完成時間依苗數量計算：
+      // 25 株以下（含）加 20 分鐘；40 株以下（含）加 25 分鐘；40 株以上加 30 分鐘。
+      if (coordCount <= 25) return 20;
+      if (coordCount <= 40) return 25;
+      return 30;
+    }
+
+    function isUpcomingReport(report) {
+      const openedAt = parseOpeningDate(report.time);
+      if (!openedAt) return false;
+
+      // 預計完成時間後，才從「開花預告區域」移到「可收果區域」。
+      const moveToActiveAt = openedAt.getTime() + getPreviewCompleteMinutes(report) * 60 * 1000;
+      return Date.now() < moveToActiveAt;
+    }
+
+    function getPreviewStatus(report) {
+      const openedAt = parseOpeningDate(report.time);
+      if (!openedAt) return "未開花";
+
+      return Date.now() < openedAt.getTime() ? "未開花" : "開花中";
+    }
+
+    function getPreviewCompleteTime(report) {
+      const openedAt = parseOpeningDate(report.time);
+      if (!openedAt) return "未填時間";
+
+      const moveToActiveAt = new Date(openedAt.getTime() + getPreviewCompleteMinutes(report) * 60 * 1000);
+      return formatDisplayTime(moveToActiveAt.toISOString());
+    }
+
+    function isExpiredReport(report) {
+      const openedAt = parseOpeningDate(report.time);
+      if (!openedAt) return false;
+
+      // 預計開花時間後 60 分鐘，轉移到過期區域。
+      const expireAt = openedAt.getTime() + FRUIT_AVAILABLE_MINUTES * 60 * 1000;
+      return Date.now() >= expireAt;
+    }
+
+    async function copyCoords(id) {
+      const report = reports.find(item => item.id === id);
+      const coords = report && report.coords ? report.coords : "";
+      if (!coords) {
+        showToast("這筆公告沒有座標可以複製");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(coords);
+        showToast("已複製座標");
+      } catch (error) {
+        const temp = document.createElement("textarea");
+        temp.value = coords;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        temp.remove();
+        showToast("已複製座標");
+      }
+    }
+
+    function escapeXml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    }
+
+    function sanitizeFileName(value) {
+      return String(value || "收果路徑")
+        .replace(/[\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, " ")
+        .trim() || "收果路徑";
+    }
+
+    function parseCoordinateLines(coordsText) {
+      return cleanCoordsText(coordsText)
+        .split("\n")
+        .map(line => {
+          const match = line.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+          if (!match) return null;
+
+          const lat = Number(match[1]);
+          const lon = Number(match[2]);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+            return null;
+          }
+
+          return { lat, lon };
+        })
+        .filter(Boolean);
+    }
+
+    function buildFruitGpx(coordsText, trackName = "妖妖收果路徑") {
+      const sourcePoints = parseCoordinateLines(coordsText);
+      const longitudeOffsets = [-0.000045, 0, 0.000045];
+      const fruitPoints = [];
+      const positionLabels = ["L", "M", "R"];
+
+      sourcePoints.forEach((point, sourceIndex) => {
+        longitudeOffsets.forEach((offset, positionIndex) => {
+          fruitPoints.push({
+            lat: point.lat,
+            lon: point.lon + offset,
+            name: `P${sourceIndex + 1}-${positionLabels[positionIndex]}`
+          });
+        });
+      });
+
+      const wptContent = fruitPoints
+        .map(point => `  <wpt lat="${escapeXml(point.lat.toFixed(6))}" lon="${escapeXml(point.lon.toFixed(6))}"><name>${escapeXml(point.name)}</name></wpt>`)
+        .join("\n");
+
+      const trkptContent = sourcePoints
+        .map(point => `      <trkpt lat="${escapeXml(point.lat.toFixed(6))}" lon="${escapeXml(point.lon.toFixed(6))}"></trkpt>`)
+        .join("\n");
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="XiaoXiao">
+${wptContent}
+  <trk>
+    <name>${escapeXml(trackName)}</name>
+    <trkseg>
+${trkptContent}
+    </trkseg>
+  </trk>
+</gpx>`;
+    }
+
+    async function arJumpHarvest(id) {
+      const report = reports.find(item => item.id === id);
+      if (!report || !report.coords) {
+        showToast("這筆公告沒有座標可以產生 AR 跳收內容");
+        return;
+      }
+
+      const sourcePoints = parseCoordinateLines(report.coords);
+      const originalCoordCount = getCoordCount(report.coords);
+      if (!sourcePoints.length || sourcePoints.length !== originalCoordCount) {
+        alert("座標格式有誤，請確認每一行皆為「緯度,經度」。");
+        return;
+      }
+
+      const trackName = buildDownloadGpxFileName(report, sourcePoints.length).replace(/\.gpx$/i, "");
+      const gpx = buildFruitGpx(report.coords, trackName);
+
+      try {
+        await navigator.clipboard.writeText(gpx);
+      } catch (error) {
+        const temp = document.createElement("textarea");
+        temp.value = gpx;
+        temp.style.position = "fixed";
+        temp.style.opacity = "0";
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        temp.remove();
+      }
+
+      showToast(`已複製 AR 跳收 GPX（${sourcePoints.length * 3} 個跳點）`);
+    }
+
+    function buildDownloadGpxFileName(report, coordCount) {
+      const flowerText = `${report.color || ""}${report.flower || ""}${coordCount || getReportCoordCount(report)}株`;
+      return `${sanitizeFileName(`妖妖收果_${flowerText}`)}.gpx`;
+    }
+
+    function downloadTextFile(content, fileName, mimeType = "application/gpx+xml;charset=utf-8") {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadFruitGpx(id) {
+      const report = reports.find(item => item.id === id);
+      if (!report || !report.coords) {
+        showToast("這筆公告沒有座標可以下載 GPX");
+        return;
+      }
+
+      const sourcePoints = parseCoordinateLines(report.coords);
+      const originalCoordCount = getCoordCount(report.coords);
+      if (!sourcePoints.length || sourcePoints.length !== originalCoordCount) {
+        alert("座標格式有誤，請確認每一行皆為「緯度,經度」。");
+        return;
+      }
+
+      const fileName = buildDownloadGpxFileName(report, sourcePoints.length);
+      const trackName = fileName.replace(/\.gpx$/i, "");
+      const gpx = buildFruitGpx(report.coords, trackName);
+      downloadTextFile(gpx, fileName);
+      showToast(`已下載 GPX：${fileName}`);
+    }
+
+    async function copyContent(id) {
+      const report = reports.find(item => item.id === id);
+      const content = report ? buildCopyContent(report) : "";
+      if (!content) {
+        showToast("這筆公告沒有內文可以複製");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(content);
+        showToast("已複製內文");
+      } catch (error) {
+        const temp = document.createElement("textarea");
+        temp.value = content;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        temp.remove();
+        showToast("已複製內文");
+      }
+    }
+
+    function renderReports() {
+      const keyword = $("keyword").value.trim().toLowerCase();
+      const color = $("colorFilter").value;
+      const flower = $("flowerFilter").value.trim().toLowerCase();
+
+      const filtered = reports.filter(report => {
+        const combined = JSON.stringify(report).toLowerCase();
+        return (!keyword || combined.includes(keyword)) &&
+          (!color || report.color === color) &&
+          (!flower || String(report.flower || "").toLowerCase().includes(flower));
+      });
+
+      if (!filtered.length) {
+        $("cards").innerHTML = "";
+        $("empty").style.display = "block";
+        return;
+      }
+
+      const previewReports = filtered.filter(report => isUpcomingReport(report));
+      const activeReports = filtered.filter(report => !isUpcomingReport(report) && !isExpiredReport(report));
+      const expiredReports = filtered.filter(report => isExpiredReport(report));
+
+      function renderPreviewTable(list) {
+        if (!list.length) return "";
+
+        return `
+          <div class="result-section-title">開花預報 <span class="sub">目前正處於未開花 / 開花中，暫不提供座標，開花完畢後會轉移到可收果區域</span></div>
+          <div class="result-table preview-table">
+            <div class="result-row result-header preview-row">
+              <div class="result-cell">花朵</div>
+              <div class="result-cell">預計開花時間</div>
+              <div class="result-cell">預計完成時間</div>
+              <div class="result-cell">操作</div>
+            </div>
+            ${list.map(report => {
+              const flowerText = `${report.color || "未填花色"}${report.flower || "未填花種"}${report.amount ? report.amount + "株" : ""}`;
+              const previewStatus = getPreviewStatus(report);
+              const previewCompleteTime = getPreviewCompleteTime(report);
+              return `
+                <div class="result-row preview-row">
+                  <div class="result-cell result-flower"><span class="mobile-label">花朵</span>🌸 ${escapeHtml(flowerText)}</div>
+                  <div class="result-cell"><span class="mobile-label">開花</span>⏰ ${escapeHtml(formatDisplayTime(report.time) || "未填時間")}</div>
+                  <div class="result-cell"><span class="mobile-label">完成</span>✅ ${escapeHtml(previewCompleteTime)}</div>
+                  <div class="result-cell">
+                    <div class="row-actions">
+                      <span class="preview-status">${escapeHtml(previewStatus)}</span>
+                      <span class="admin-actions">
+                        <button class="green" onclick="editReport('${report.id}')">編輯</button>
+                        <button class="danger" onclick="deleteReport('${report.id}')">刪除</button>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `;
+      }
+
+      function renderActiveTable(list) {
+        if (!list.length) return "";
+
+        return `
+          <div class="result-section-title">可收果區域 <span class="sub">預計開花時間後 1 小時內提供座標</span></div>
+          <div class="result-table active-table">
+            <div class="result-row result-header">
+              <div class="result-cell">花田名稱</div>
+              <div class="result-cell">花朵</div>
+              <div class="result-cell">開花時間</div>
+              <div class="result-cell">備註</div>
+              <div class="result-cell result-count">座標數</div>
+              <div class="result-cell">操作</div>
+            </div>
+            ${list.map(report => {
+              const coordCount = report.coords ? report.coords.split("\n").filter(Boolean).length : 0;
+              const flowerText = `${report.color || "未填花色"}${report.flower || "未填花種"}${report.amount ? report.amount + "株" : ""}`;
+              return `
+                <div class="result-row">
+                  <div class="result-cell result-place"><span class="mobile-label">花田</span>${escapeHtml(report.place || "未命名花田")}</div>
+                  <div class="result-cell result-flower"><span class="mobile-label">花朵</span>🌸 ${escapeHtml(flowerText)}</div>
+                  <div class="result-cell"><span class="mobile-label">時間</span>⏰ ${escapeHtml(formatDisplayTime(report.time) || "未填時間")}</div>
+                  <div class="result-cell"><span class="mobile-label">備註</span>📝 ${escapeHtml(report.note || "無備註")}</div>
+                  <div class="result-cell result-count"><span class="mobile-label">座標</span>${coordCount}</div>
+                  <div class="result-cell">
+                    <div class="row-actions">
+                      <button onclick="copyContent('${report.id}')">複製內文</button>
+                      <button class="green" onclick="copyCoords('${report.id}')">複製座標</button>
+                      <button class="secondary" onclick="arJumpHarvest('${report.id}')">AR跳收</button>
+                      <button class="download" onclick="downloadFruitGpx('${report.id}')">下載GPX</button>
+                      <span class="admin-actions">
+                        <button class="green" onclick="editReport('${report.id}')">編輯</button>
+                        <button class="danger" onclick="deleteReport('${report.id}')">刪除</button>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `;
+      }
+
+      function renderExpiredTable(list) {
+        if (!list.length) return "";
+
+        return `
+          <div class="result-section-title">過期區域 <span class="sub">預計開花時間超過 1 小時，不提供座標</span></div>
+          <div class="result-table expired-table">
+            <div class="result-row result-header expired-row">
+              <div class="result-cell">花田名稱</div>
+              <div class="result-cell">花朵</div>
+              <div class="result-cell">開花時間</div>
+              <div class="result-cell">備註</div>
+              <div class="result-cell">狀態 / 操作</div>
+            </div>
+            ${list.map(report => {
+              const flowerText = `${report.color || "未填花色"}${report.flower || "未填花種"}${report.amount ? report.amount + "株" : ""}`;
+              return `
+                <div class="result-row expired-row">
+                  <div class="result-cell result-place"><span class="mobile-label">花田</span>${escapeHtml(report.place || "未命名花田")}</div>
+                  <div class="result-cell result-flower"><span class="mobile-label">花朵</span>🌸 ${escapeHtml(flowerText)}</div>
+                  <div class="result-cell"><span class="mobile-label">時間</span>⏰ ${escapeHtml(formatDisplayTime(report.time) || "未填時間")}</div>
+                  <div class="result-cell"><span class="mobile-label">備註</span>📝 ${escapeHtml(report.note || "無備註")}</div>
+                  <div class="result-cell">
+                    <div class="row-actions">
+                      <span class="expired-status">已過期</span>
+                      <span class="admin-actions">
+                        <button class="green" onclick="editReport('${report.id}')">編輯</button>
+                        <button class="danger" onclick="deleteReport('${report.id}')">刪除</button>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        `;
+      }
+
+      $("cards").innerHTML = renderPreviewTable(previewReports) + renderActiveTable(activeReports) + renderExpiredTable(expiredReports);
+      $("empty").style.display = "none";
+    }
+
+
+    function editReport(id) {
+      const report = reports.find(item => item.id === id);
+      if (report) setFormData(report);
+    }
+
+    async function deleteReport(id) {
+      if (!confirm("確定要刪除此公告嗎？")) return;
+
+      const success = await deleteReportFromSheet(id);
+      if (!success) return;
+
+      await loadReports();
+      renderReports();
+      showToast("已刪除公告");
+    }
+
+    window.copyCoords = copyCoords;
+    window.arJumpHarvest = arJumpHarvest;
+    window.downloadFruitGpx = downloadFruitGpx;
+    window.copyContent = copyContent;
+    window.editReport = editReport;
+    window.deleteReport = deleteReport;
+
+    $("parseBtn").addEventListener("click", () => {
+      const rawText = cleanSpreadsheetText($("rawInput").value);
+      const coordsText = cleanCoordsText($("coordsInput").value);
+
+      if (!rawText || !coordsText) {
+        alert("請先填入「內容」與「座標」兩個欄位，再進行解析，避免資料缺漏。");
+        return;
+      }
+
+      const parsed = parseReportText(rawText);
+      const coordCount = getCoordCount(coordsText);
+      $("rawInput").value = parsed.raw;
+      $("coordsInput").value = coordsText;
+      $("placeInput").value = parsed.place;
+      if (parsed.color) $("colorInput").value = parsed.color;
+      if (parsed.flower) $("flowerInput").value = parsed.flower;
+      $("amountInput").value = coordCount;
+      $("timeInput").value = parsed.time;
+      $("noteInput").value = parsed.note;
+      showToast(`已解析，株數已套用座標數量：${coordCount}`);
+    });
+
+    $("saveBtn").addEventListener("click", async () => {
+      const rawText = cleanSpreadsheetText($("rawInput").value);
+      const coordsText = cleanCoordsText($("coordsInput").value);
+
+      if (!rawText || !coordsText) {
+        alert("請先填入「內容」與「座標」兩個欄位，再儲存公告，避免資料缺漏。");
+        return;
+      }
+
+      $("rawInput").value = rawText;
+      $("coordsInput").value = coordsText;
+      syncAmountWithCoords();
+
+      // 最後一道強制驗證：未列於 FLOWERS 清單的內容絕不送往 Google Apps Script。
+      if (!validateFlowerInput(true)) return;
+
+      const data = getFormData();
+      if (!getCanonicalFlowerName(data.flower)) {
+        alert("花朵種類驗證失敗，請重新從清單選擇。");
+        $("flowerInput").focus();
+        return;
+      }
+      if (!data.place) {
+        alert("請至少填寫地點 / 花田名稱。若已貼上公告文字，可先按「從公告文字自動解析」。");
+        return;
+      }
+
+      const success = await saveReportToSheet(data);
+      if (!success) return;
+
+      await loadReports();
+      clearForm();
+      renderReports();
+      showToast("已儲存公告");
+    });
+
+    $("clearFormBtn").addEventListener("click", clearForm);
+
+    $("deleteAllBtn").addEventListener("click", async () => {
+      if (!confirm("確定要刪除全部公告嗎？此動作無法復原。")) return;
+      const ids = reports.map(item => item.id).filter(Boolean);
+      for (const id of ids) {
+        const success = await deleteReportFromSheet(id);
+        if (!success) return;
+      }
+
+      await loadReports();
+      renderReports();
+      showToast("已刪除全部公告");
+    });
+
+    $("flowerInput").addEventListener("input", () => {
+      // 輸入過程即同步有效性；仍可繼續打字搜尋，但無效名稱不能儲存。
+      validateFlowerInput(false);
+    });
+    $("flowerInput").addEventListener("change", () => validateFlowerInput(false));
+    $("flowerInput").addEventListener("blur", () => validateFlowerInput(false));
+
+    function toggleAdminPanel() {
+      setAdminPanelCollapsed(!$("adminPanel").classList.contains("collapsed"));
+    }
+
+    $("adminPanelHeader").addEventListener("click", toggleAdminPanel);
+    $("adminPanelHeader").addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleAdminPanel();
+      }
+    });
+
+    $("coordsInput").addEventListener("input", syncAmountWithCoords);
+    $("keyword").addEventListener("input", renderReports);
+    $("colorFilter").addEventListener("change", renderReports);
+    $("flowerFilter").addEventListener("input", renderReports);
+    $("flowerFilter").addEventListener("change", renderReports);
+
+    $("adminLoginBtn").addEventListener("click", () => $("loginDialog").showModal());
+    $("closeLoginBtn").addEventListener("click", () => $("loginDialog").close());
+    $("passwordInput").addEventListener("keydown", event => {
+      if (event.key === "Enter") $("confirmLoginBtn").click();
+    });
+    $("confirmLoginBtn").addEventListener("click", async () => {
+      const inputPassword = $("passwordInput").value;
+
+      if (!inputPassword) {
+        alert("請輸入管理密碼。");
+        return;
+      }
+
+      const ok = await verifyAdminPassword(inputPassword);
+
+      if (ok) {
+        adminPassword = inputPassword;
+        sessionStorage.setItem("pikminAdminPassword", inputPassword);
+        $("passwordInput").value = "";
+        $("loginDialog").close();
+        setAdminMode(true);
+        showToast("已進入管理模式");
+      } else {
+        alert("管理密碼錯誤。");
+      }
+    });
+
+    $("logoutBtn").addEventListener("click", () => {
+      clearForm();
+      adminPassword = "";
+      sessionStorage.removeItem("pikminAdminPassword");
+      setAdminMode(false);
+      showToast("已離開管理模式");
+    });
+
+    const REPORT_REFRESH_INTERVAL = 60 * 1000;
+    const REPORT_REFRESH_STALE_AFTER = 30 * 1000;
+
+    let refreshTimer = null;
+    let isLoadingReports = false;
+    let lastReportsRefreshAt = 0;
+
+    async function refreshReports({ force = false } = {}) {
+      // 頁面位於背景時停止呼叫 Google Apps Script API。
+      if (!force && document.visibilityState !== "visible") return;
+
+      // 避免前一次讀取尚未完成時，又送出下一個重複請求。
+      if (isLoadingReports) return;
+
+      isLoadingReports = true;
+      try {
+        await loadReports();
+        lastReportsRefreshAt = Date.now();
+        renderReports();
+      } finally {
+        isLoadingReports = false;
+      }
+    }
+
+    function stopReportsRefreshTimer() {
+      if (refreshTimer !== null) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+    }
+
+    function startReportsRefreshTimer() {
+      stopReportsRefreshTimer();
+
+      // 只有頁面在前景時才建立固定刷新計時器。
+      if (document.visibilityState !== "visible") return;
+
+      refreshTimer = setInterval(() => {
+        refreshReports();
+      }, REPORT_REFRESH_INTERVAL);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        // 回到網頁時，若資料已超過 30 秒未更新，立即刷新一次。
+        if (Date.now() - lastReportsRefreshAt >= REPORT_REFRESH_STALE_AFTER) {
+          refreshReports();
+        }
+        startReportsRefreshTimer();
+      } else {
+        stopReportsRefreshTimer();
+      }
+    });
+
+    function enableMobileNoticeDrag() {
+      const notice = document.querySelector(".notice-float");
+      if (!notice) return;
+
+      const mobileMedia = window.matchMedia("(max-width: 1024px)");
+      const storageKey = "pikminNoticeFloatPosition";
+      let dragging = false;
+      let pointerOffsetX = 0;
+      let pointerOffsetY = 0;
+
+      function clampPosition(left, top) {
+        const margin = 8;
+        const maxLeft = Math.max(margin, window.innerWidth - notice.offsetWidth - margin);
+        const maxTop = Math.max(margin, window.innerHeight - notice.offsetHeight - margin);
+        return {
+          left: Math.min(Math.max(left, margin), maxLeft),
+          top: Math.min(Math.max(top, margin), maxTop)
+        };
+      }
+
+      function applyPosition(left, top, save = false) {
+        if (!mobileMedia.matches) return;
+        const position = clampPosition(left, top);
+        notice.style.left = `${position.left}px`;
+        notice.style.top = `${position.top}px`;
+        notice.style.right = "auto";
+        notice.style.bottom = "auto";
+
+        if (save) {
+          localStorage.setItem(storageKey, JSON.stringify(position));
+        }
+      }
+
+      function restorePosition() {
+        if (!mobileMedia.matches) {
+          notice.style.left = "";
+          notice.style.top = "";
+          notice.style.right = "";
+          notice.style.bottom = "";
+          return;
+        }
+
+        try {
+          const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+          if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+            applyPosition(saved.left, saved.top);
+          }
+        } catch (error) {
+          localStorage.removeItem(storageKey);
+        }
+      }
+
+      notice.addEventListener("pointerdown", event => {
+        if (!mobileMedia.matches || event.button !== 0) return;
+
+        const rect = notice.getBoundingClientRect();
+        dragging = true;
+        pointerOffsetX = event.clientX - rect.left;
+        pointerOffsetY = event.clientY - rect.top;
+        notice.classList.add("dragging");
+        notice.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+
+      notice.addEventListener("pointermove", event => {
+        if (!dragging || !mobileMedia.matches) return;
+        applyPosition(event.clientX - pointerOffsetX, event.clientY - pointerOffsetY);
+        event.preventDefault();
+      });
+
+      function stopDragging(event) {
+        if (!dragging) return;
+        dragging = false;
+        notice.classList.remove("dragging");
+
+        const rect = notice.getBoundingClientRect();
+        applyPosition(rect.left, rect.top, true);
+
+        if (event && notice.hasPointerCapture(event.pointerId)) {
+          notice.releasePointerCapture(event.pointerId);
+        }
+      }
+
+      notice.addEventListener("pointerup", stopDragging);
+      notice.addEventListener("pointercancel", stopDragging);
+
+      window.addEventListener("resize", () => {
+        if (!mobileMedia.matches) return;
+        const rect = notice.getBoundingClientRect();
+        applyPosition(rect.left, rect.top, true);
+      });
+
+      mobileMedia.addEventListener("change", restorePosition);
+      requestAnimationFrame(restorePosition);
+    }
+
+    fillOptions();
+    enableMobileNoticeDrag();
+    refreshReports({ force: true }).then(() => {
+      setAdminMode(isAdmin);
+    });
+    startReportsRefreshTimer();
+  </script>
+</body>
+</html>
