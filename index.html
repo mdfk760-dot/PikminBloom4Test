@@ -1306,6 +1306,7 @@
       return {
         success: !!data.success,
         role: data.role || "public",
+        reports: Array.isArray(data.reports) ? data.reports : null,
         message: data.message || ""
       };
     }
@@ -2129,9 +2130,20 @@ ${trkptContent}
       $("loginDialog").close();
       setAccessMode(result.role);
 
-      hasDisplayedReportSnapshot = false;
-      const restoredProtected = restoreReportsSnapshot(result.role);
-      await refreshReports({ force: true, showLoading: !restoredProtected });
+      // 驗證成功的同一個 API 回應已附帶該權限可見的公告，
+      // 不再登入成功後立刻發第二次 list POST。
+      if (Array.isArray(result.reports)) {
+        reports = result.reports;
+        hasDisplayedReportSnapshot = true;
+        saveReportsSnapshot(result.role, reports);
+        renderReports();
+      } else {
+        // 相容舊版 Apps Script：若尚未回傳 reports，才走原本的第二次讀取。
+        hasDisplayedReportSnapshot = false;
+        const restoredProtected = restoreReportsSnapshot(result.role);
+        await refreshReports({ force: true, showLoading: !restoredProtected });
+      }
+
       showToast(result.role === "admin" ? "已進入 Admin 管理模式" : "已進入私田模式");
     });
 
