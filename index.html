@@ -174,19 +174,22 @@
   display: block;
 }
 
-    .-panel-header {
+    .admin-panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      width: 100%;
+      min-height: 50px;
       padding: 14px 18px;
       border-bottom: 1px solid var(--border);
       background: rgba(255, 240, 245, 0.72);
       cursor: pointer;
       user-select: none;
+      -webkit-user-select: none;
     }
 
-    .-panel-header:hover .-panel-title,
+    .admin-panel-header:hover .admin-panel-title,
     .-panel-header:hover .admin-collapse-btn {
       filter: brightness(0.95);
     }
@@ -983,9 +986,22 @@
       };
     }
 
+    const REPORT_FETCH_TIMEOUT = 15000;
+
     async function loadReports() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REPORT_FETCH_TIMEOUT);
+
       try {
-        const res = await fetch(`${API_URL}?action=list&ts=${Date.now()}`);
+        const res = await fetch(`${API_URL}?action=list&ts=${Date.now()}`, {
+          signal: controller.signal,
+          cache: "no-store"
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const data = await res.json();
 
         if (!data.success) {
@@ -993,10 +1009,14 @@
         }
 
         reports = data.reports || [];
+        return true;
       } catch (error) {
         console.error(error);
-        reports = [];
-        showToast("讀取 Google Sheet 失敗");
+        const timedOut = error && error.name === "AbortError";
+        showToast(timedOut ? "資料載入逾時，稍後會自動重試" : "讀取 Google Sheet 失敗");
+        return false;
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
@@ -1796,35 +1816,46 @@ ${trkptContent}
     let isLoadingReports = false;
     let lastReportsRefreshAt = 0;
 
-   async function refreshReports({ force = false } = {}) {
-  if (!force && document.visibilityState !== "visible") return;
+    async function refreshReports({ force = false } = {}) {
+      if (!force && document.visibilityState !== "visible") return;
+      if (isLoadingReports) return;
 
-  if (isLoadingReports) return;
+      isLoadingReports = true;
 
-  isLoadingReports = true;
+      const loading = $("loadingMessage");
+      const loadingBaseText = "🌱 皮克敏正在搬運花田資料，請稍後";
+      let loadingDotStep = 1;
+      let loadingAnimationTimer = null;
 
-  const loading = $("loadingMessage");
+      if (loading) {
+        loading.style.display = "block";
+        loading.textContent = `${loadingBaseText}.`;
 
-  if (loading) {
-    loading.style.display = "block";
-    loading.textContent =
-      "🌱 皮克敏正在搬運花田資料，請稍後";
-  }
+        loadingAnimationTimer = setInterval(() => {
+          loadingDotStep = loadingDotStep % 3 + 1;
+          loading.textContent = `${loadingBaseText}${".".repeat(loadingDotStep)}`;
+        }, 450);
+      }
 
-  try {
-    await loadReports();
+      try {
+        const success = await loadReports();
 
-    lastReportsRefreshAt = Date.now();
+        if (success) {
+          lastReportsRefreshAt = Date.now();
+          renderReports();
+        }
+      } finally {
+        if (loadingAnimationTimer !== null) {
+          clearInterval(loadingAnimationTimer);
+        }
 
-    renderReports();
+        if (loading) {
+          loading.style.display = "none";
+        }
 
-    if (loading) {
-      loading.style.display = "none";
+        isLoadingReports = false;
+      }
     }
-  } finally {
-    isLoadingReports = false;
-  }
-}
 
     function stopReportsRefreshTimer() {
       if (refreshTimer !== null) {
