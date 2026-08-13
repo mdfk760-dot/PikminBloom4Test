@@ -552,6 +552,54 @@
       color: var(--green-dark);
     }
 
+
+
+    /* 網站發布新版時，提醒仍開著舊頁面的使用者重新整理 */
+    .site-update-banner {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-18px);
+      z-index: 1000;
+      width: min(560px, calc(100% - 28px));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+    }
+
+    .site-update-banner.active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .site-update-banner-text {
+      min-width: 0;
+      line-height: 1.45;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .site-update-banner button {
+      flex: 0 0 auto;
+      width: auto;
+      white-space: nowrap;
+      padding: 9px 12px;
+    }
+
     @media (max-width: 1024px) {
       header {
         padding: 18px 12px 10px;
@@ -707,6 +755,19 @@
         padding: 4px 0;
       }
 
+
+
+      .site-update-banner {
+        top: 10px;
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .site-update-banner button {
+        width: 100%;
+      }
+
       .notice-float {
         left: auto;
         right: 10px;
@@ -739,6 +800,11 @@
   </style>
 </head>
 <body>
+  <div id="siteUpdateBanner" class="site-update-banner" role="status" aria-live="polite">
+    <div class="site-update-banner-text">🌱 網站有新版本，請重新整理取得最新版。</div>
+    <button id="reloadLatestBtn" type="button">重新整理取得最新版</button>
+  </div>
+
   <header>
     <h1>🌸 妖妖開花公告</h1>
     <p>Admin 分享開花成果，User 一鍵複製座標。</p>
@@ -754,8 +820,8 @@
         <input id="flowerFilter" type="search" list="flowerFilterList" placeholder="全部花種（可輸入搜尋）" autocomplete="off" />
         <datalist id="flowerFilterList"></datalist>
       </div>
-      <button id="adminLoginBtn" class="secondary">Admin登入</button>
-      <button id="logoutBtn" class="ghost" style="display:none;">Admin登出</button>
+      <button id="adminLoginBtn" class="secondary">登入</button>
+      <button id="logoutBtn" class="ghost" style="display:none;">登出</button>
     </section>
 
     <section id="adminPanel" class="panel admin-panel">
@@ -844,10 +910,10 @@
 
   <dialog id="loginDialog">
     <button id="closeLoginBtn" type="button" aria-label="關閉登入視窗" title="關閉">&times;</button>
-    <h3 style="margin:0 44px 0 0;">Admin 管理登入</h3>
-    <p style="color:var(--muted);line-height:1.6;">只有管理員才可以登入，請按右上角叉叉返回，別再問我密碼。</p>
+    <h3 style="margin:0 44px 0 0;">花田權限登入</h3>
+    <p style="color:var(--muted);line-height:1.6;">輸入對應密碼可進入私田模式或 Admin 管理模式。</p>
     <div class="small-row">
-      <input id="passwordInput" type="password" placeholder="管理密碼" />
+      <input id="passwordInput" type="password" placeholder="輸入私田或 Admin 密碼" />
       <button id="confirmLoginBtn">登入</button>
     </div>
   </dialog>
@@ -879,11 +945,100 @@
 
     let reports = [];
     let editingId = null;
-    let adminPassword = sessionStorage.getItem("pikminAdminPassword") || "";
-    let isAdmin = sessionStorage.getItem("pikminAdmin") === "true" && !!adminPassword;
+    let accessPassword = sessionStorage.getItem("pikminAccessPassword") || "";
+    let accessRole = "public"; // public | private | admin
+    let adminPassword = "";
+    let isAdmin = false;
     let toastTimer = null;
 
     const $ = (id) => document.getElementById(id);
+
+    // 不使用人工版本號：直接檢查 GitHub Pages 目前發布檔案是否已改變。
+    const SITE_UPDATE_CHECK_INTERVAL = 60 * 1000;
+    let publishedPageFingerprint = null;
+    let siteUpdateTimer = null;
+    let siteUpdateDetected = false;
+
+    function hashText(text) {
+      let hash = 2166136261;
+      for (let i = 0; i < text.length; i++) {
+        hash ^= text.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return (hash >>> 0).toString(16);
+    }
+
+    async function getPublishedPageFingerprint() {
+      const url = new URL(window.location.origin + window.location.pathname);
+      url.searchParams.set("_updateCheck", Date.now());
+
+      try {
+        const response = await fetch(url.toString(), {
+          method: "HEAD",
+          cache: "no-store"
+        });
+
+        if (response.ok) {
+          const etag = response.headers.get("etag") || "";
+          const lastModified = response.headers.get("last-modified") || "";
+          const contentLength = response.headers.get("content-length") || "";
+          const headerFingerprint = [etag, lastModified, contentLength].filter(Boolean).join("|");
+          if (headerFingerprint) return `header:${headerFingerprint}`;
+        }
+      } catch (error) {
+        console.debug("HEAD 版本檢查失敗，改用內容指紋。", error);
+      }
+
+      // 若主機沒有提供 ETag / Last-Modified，才退回抓 HTML 內容比對。
+      const response = await fetch(url.toString(), { cache: "no-store" });
+      if (!response.ok) throw new Error(`版本檢查 HTTP ${response.status}`);
+      return `html:${hashText(await response.text())}`;
+    }
+
+    function showSiteUpdateBanner() {
+      if (siteUpdateDetected) return;
+      siteUpdateDetected = true;
+      const banner = $("siteUpdateBanner");
+      if (banner) banner.classList.add("active");
+    }
+
+    async function checkForSiteUpdate({ initialize = false } = {}) {
+      if (siteUpdateDetected) return;
+      if (!initialize && document.visibilityState !== "visible") return;
+
+      try {
+        const fingerprint = await getPublishedPageFingerprint();
+
+        if (!publishedPageFingerprint || initialize) {
+          publishedPageFingerprint = fingerprint;
+          return;
+        }
+
+        if (fingerprint !== publishedPageFingerprint) {
+          showSiteUpdateBanner();
+        }
+      } catch (error) {
+        // 版本檢查失敗不影響公告本身，下一輪再試。
+        console.debug("網站版本檢查失敗", error);
+      }
+    }
+
+    function stopSiteUpdateTimer() {
+      if (siteUpdateTimer !== null) {
+        clearInterval(siteUpdateTimer);
+        siteUpdateTimer = null;
+      }
+    }
+
+    function startSiteUpdateTimer() {
+      stopSiteUpdateTimer();
+      if (document.visibilityState !== "visible" || siteUpdateDetected) return;
+
+      siteUpdateTimer = setInterval(() => {
+        checkForSiteUpdate();
+      }, SITE_UPDATE_CHECK_INTERVAL);
+    }
+
 
     function showToast(message) {
       const toast = $("toast");
@@ -988,15 +1143,36 @@
 
     const REPORT_FETCH_TIMEOUT = 15000;
 
-    async function loadReports() {
+    async function fetchWithTimeout(url, options = {}) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), REPORT_FETCH_TIMEOUT);
 
       try {
-        const res = await fetch(`${API_URL}?action=list&ts=${Date.now()}`, {
+        return await fetch(url, {
+          ...options,
           signal: controller.signal,
           cache: "no-store"
         });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    async function loadReports() {
+      try {
+        let res;
+
+        if (accessRole === "private" || accessRole === "admin") {
+          res = await fetchWithTimeout(API_URL, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "list",
+              accessPassword
+            })
+          });
+        } else {
+          res = await fetchWithTimeout(`${API_URL}?action=list&ts=${Date.now()}`);
+        }
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -1005,6 +1181,13 @@
         const data = await res.json();
 
         if (!data.success) {
+          // 密碼被更改或失效時，自動退出權限模式，避免一直卡在錯誤狀態。
+          if ((accessRole === "private" || accessRole === "admin") && data.code === "INVALID_ACCESS") {
+            clearAccessSession();
+            setAccessMode("public");
+            showToast("登入已失效，已切回公開模式");
+            return await loadReports();
+          }
           throw new Error(data.message || "讀取資料失敗");
         }
 
@@ -1015,27 +1198,32 @@
         const timedOut = error && error.name === "AbortError";
         showToast(timedOut ? "資料載入逾時，稍後會自動重試" : "讀取 Google Sheet 失敗");
         return false;
-      } finally {
-        clearTimeout(timeoutId);
       }
     }
 
-    async function verifyAdminPassword(password) {
+    async function verifyAccessPassword(password) {
       try {
-        const res = await fetch(API_URL, {
+        const res = await fetchWithTimeout(API_URL, {
           method: "POST",
           body: JSON.stringify({
             action: "verify",
-            adminPassword: password
+            accessPassword: password
           })
         });
 
         const data = await res.json();
-        return !!data.success;
+        return {
+          success: !!data.success,
+          role: data.role || "public",
+          message: data.message || ""
+        };
       } catch (error) {
         console.error(error);
-        alert("無法驗證管理密碼，請確認 Apps Script 已重新部署，且存取權限為任何人。");
-        return false;
+        return {
+          success: false,
+          role: "public",
+          message: "無法驗證密碼，請確認 Apps Script 已重新部署。"
+        };
       }
     }
 
@@ -1097,17 +1285,36 @@
       sessionStorage.setItem("pikminAdminPanelCollapsed", collapsed ? "true" : "false");
     }
 
-    function setAdminMode(value) {
-      isAdmin = value;
-      sessionStorage.setItem("pikminAdmin", value ? "true" : "false");
-      document.body.classList.toggle("admin-on", value);
-      $("adminPanel").classList.toggle("active", value);
-      $("adminLoginBtn").style.display = value ? "none" : "inline-block";
-      $("logoutBtn").style.display = value ? "inline-block" : "none";
-      if (value) {
+    function clearAccessSession() {
+      accessPassword = "";
+      adminPassword = "";
+      sessionStorage.removeItem("pikminAccessPassword");
+      // 清掉舊版曾使用的登入狀態。
+      sessionStorage.removeItem("pikminAdminPassword");
+      sessionStorage.removeItem("pikminAdmin");
+    }
+
+    function setAccessMode(role) {
+      accessRole = ["private", "admin"].includes(role) ? role : "public";
+      isAdmin = accessRole === "admin";
+      adminPassword = isAdmin ? accessPassword : "";
+
+      document.body.classList.toggle("admin-on", isAdmin);
+      $("adminPanel").classList.toggle("active", isAdmin);
+      $("adminLoginBtn").style.display = accessRole === "public" ? "inline-block" : "none";
+      $("logoutBtn").style.display = accessRole === "public" ? "none" : "inline-block";
+      $("logoutBtn").textContent = isAdmin ? "Admin登出" : "私田登出";
+
+      if (isAdmin) {
         setAdminPanelCollapsed(sessionStorage.getItem("pikminAdminPanelCollapsed") === "true");
       }
+
       renderReports();
+    }
+
+    // 保留舊函式名稱，避免其他既有程式若有呼叫時失效。
+    function setAdminMode(value) {
+      setAccessMode(value ? "admin" : "public");
     }
 
     function normalizeFlowerName(value) {
@@ -1783,30 +1990,43 @@ ${trkptContent}
       const inputPassword = $("passwordInput").value;
 
       if (!inputPassword) {
-        alert("請輸入管理密碼。");
+        alert("請輸入密碼。");
         return;
       }
 
-      const ok = await verifyAdminPassword(inputPassword);
+      const result = await verifyAccessPassword(inputPassword);
 
-      if (ok) {
-        adminPassword = inputPassword;
-        sessionStorage.setItem("pikminAdminPassword", inputPassword);
-        $("passwordInput").value = "";
-        $("loginDialog").close();
-        setAdminMode(true);
-        showToast("已進入管理模式");
-      } else {
-        alert("管理密碼錯誤。");
+      if (!result.success || !["private", "admin"].includes(result.role)) {
+        alert(result.message || "密碼錯誤。");
+        return;
       }
+
+      accessPassword = inputPassword;
+      sessionStorage.setItem("pikminAccessPassword", inputPassword);
+      $("passwordInput").value = "";
+      $("loginDialog").close();
+      setAccessMode(result.role);
+
+      await refreshReports({ force: true });
+      showToast(result.role === "admin" ? "已進入 Admin 管理模式" : "已進入私田模式");
     });
 
-    $("logoutBtn").addEventListener("click", () => {
+    $("logoutBtn").addEventListener("click", async () => {
+      const wasAdmin = isAdmin;
       clearForm();
-      adminPassword = "";
-      sessionStorage.removeItem("pikminAdminPassword");
-      setAdminMode(false);
-      showToast("已離開管理模式");
+      clearAccessSession();
+      setAccessMode("public");
+      await refreshReports({ force: true });
+      showToast(wasAdmin ? "已離開 Admin 管理模式" : "已離開私田模式");
+    });
+
+
+
+    $("reloadLatestBtn").addEventListener("click", () => {
+      // 加上一次性參數，避免瀏覽器直接沿用舊 HTML 快取。
+      const url = new URL(window.location.href);
+      url.searchParams.set("_latest", Date.now());
+      window.location.replace(url.toString());
     });
 
     const REPORT_REFRESH_INTERVAL = 60 * 1000;
@@ -1877,13 +2097,16 @@ ${trkptContent}
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
-        // 回到網頁時，若資料已超過 30 秒未更新，立即刷新一次。
+        // 回到網頁時同時檢查公告與網站本體是否已有新版。
         if (Date.now() - lastReportsRefreshAt >= REPORT_REFRESH_STALE_AFTER) {
           refreshReports();
         }
+        checkForSiteUpdate();
         startReportsRefreshTimer();
+        startSiteUpdateTimer();
       } else {
         stopReportsRefreshTimer();
+        stopSiteUpdateTimer();
       }
     });
 
@@ -1983,12 +2206,31 @@ ${trkptContent}
       requestAnimationFrame(restorePosition);
     }
 
-    fillOptions();
-    enableMobileNoticeDrag();
-    refreshReports({ force: true }).then(() => {
-      setAdminMode(isAdmin);
-    });
-    startReportsRefreshTimer();
+    async function initializeAccessAndReports() {
+      // 先記錄目前 GitHub Pages 的發布指紋，之後有更新就能通知仍開著舊頁面的使用者。
+      await checkForSiteUpdate({ initialize: true });
+
+      fillOptions();
+      enableMobileNoticeDrag();
+
+      if (accessPassword) {
+        const result = await verifyAccessPassword(accessPassword);
+        if (result.success && ["private", "admin"].includes(result.role)) {
+          setAccessMode(result.role);
+        } else {
+          clearAccessSession();
+          setAccessMode("public");
+        }
+      } else {
+        setAccessMode("public");
+      }
+
+      await refreshReports({ force: true });
+      startReportsRefreshTimer();
+      startSiteUpdateTimer();
+    }
+
+    initializeAccessAndReports();
   </script>
 </body>
 </html>
