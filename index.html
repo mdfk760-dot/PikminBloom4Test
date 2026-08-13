@@ -820,7 +820,7 @@
         <input id="flowerFilter" type="search" list="flowerFilterList" placeholder="全部花種（可輸入搜尋）" autocomplete="off" />
         <datalist id="flowerFilterList"></datalist>
       </div>
-      <button id="adminLoginBtn" class="secondary">登入</button>
+      <button id="adminLoginBtn" class="secondary">管理員登入</button>
       <button id="logoutBtn" class="ghost" style="display:none;">登出</button>
     </section>
 
@@ -1303,7 +1303,7 @@
       $("adminPanel").classList.toggle("active", isAdmin);
       $("adminLoginBtn").style.display = accessRole === "public" ? "inline-block" : "none";
       $("logoutBtn").style.display = accessRole === "public" ? "none" : "inline-block";
-      $("logoutBtn").textContent = isAdmin ? "Admin登出" : "私田登出";
+      $("logoutBtn").textContent = isAdmin ? "管理員登出" : "私田登出";
 
       if (isAdmin) {
         setAdminPanelCollapsed(sessionStorage.getItem("pikminAdminPanelCollapsed") === "true");
