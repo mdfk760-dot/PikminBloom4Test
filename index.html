@@ -802,7 +802,7 @@
 <body>
   <div id="siteUpdateBanner" class="site-update-banner" role="status" aria-live="polite">
     <div class="site-update-banner-text">🌱 網站有新版本，請重新整理取得最新版。</div>
-    <button id="reloadLatestBtn" type="button">重新整理取得最新版</button>
+    <button id="reloadLatestBtn" type="button">重新整理</button>
   </div>
 
   <header>
@@ -914,9 +914,8 @@
     <p style="color:var(--muted);line-height:1.6;">只有管理員才可以登入，別再問我密碼。</p>
     <div class="small-row">
       <input id="passwordInput" type="password" placeholder="請輸入密碼" />
-      <button id="confirmLoginBtn">管理登入</button>
+      <button id="confirmLoginBtn">登入</button>
     </div>
-    <div id="loginStatus" style="margin-top:10px;min-height:1.5em;color:var(--muted);font-size:13px;line-height:1.5;"></div>
   </dialog>
 
   <div id="toast" class="toast"></div>
@@ -1206,51 +1205,24 @@
       try {
         const res = await fetchWithTimeout(API_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
           body: JSON.stringify({
             action: "verify",
             accessPassword: password
           })
         });
 
-        const rawText = await res.text();
-        let data;
-
-        try {
-          data = JSON.parse(rawText);
-        } catch (parseError) {
-          console.error("Apps Script 回傳非 JSON：", rawText);
-          return {
-            success: false,
-            role: "public",
-            message: `Apps Script 回傳格式異常（HTTP ${res.status}）。請確認 Web App 已部署最新版。`
-          };
-        }
-
-        if (!res.ok) {
-          return {
-            success: false,
-            role: data.role || "public",
-            message: data.message || `Apps Script HTTP 錯誤：${res.status}`
-          };
-        }
-
+        const data = await res.json();
         return {
           success: !!data.success,
           role: data.role || "public",
           message: data.message || ""
         };
       } catch (error) {
-        console.error("登入驗證失敗：", error);
-        const timedOut = error && error.name === "AbortError";
+        console.error(error);
         return {
           success: false,
           role: "public",
-          message: timedOut
-            ? "驗證逾時（15 秒），Apps Script 沒有及時回應。"
-            : `無法連線到 Apps Script：${error && error.message ? error.message : "未知錯誤"}`
+          message: "無法驗證密碼，請確認 Apps Script 已重新部署。"
         };
       }
     }
@@ -2016,48 +1988,27 @@ ${trkptContent}
     });
     $("confirmLoginBtn").addEventListener("click", async () => {
       const inputPassword = $("passwordInput").value;
-      const loginBtn = $("confirmLoginBtn");
-      const loginStatus = $("loginStatus");
 
       if (!inputPassword) {
-        loginStatus.textContent = "請輸入密碼。";
-        loginStatus.style.color = "var(--danger)";
+        alert("請輸入密碼。");
         return;
       }
 
-      loginBtn.disabled = true;
-      loginBtn.textContent = "驗證中…";
-      loginStatus.textContent = "正在向 Apps Script 驗證密碼…";
-      loginStatus.style.color = "var(--muted)";
+      const result = await verifyAccessPassword(inputPassword);
 
-      try {
-        const result = await verifyAccessPassword(inputPassword);
-
-        if (!result.success || !["private", "admin"].includes(result.role)) {
-          loginStatus.textContent = `✗ ${result.message || "密碼錯誤。"}`;
-          loginStatus.style.color = "var(--danger)";
-          return;
-        }
-
-        loginStatus.textContent = result.role === "admin"
-          ? "✓ Admin 密碼驗證成功"
-          : "✓ 私田密碼驗證成功";
-        loginStatus.style.color = "var(--green-dark)";
-
-        accessPassword = inputPassword;
-        sessionStorage.setItem("pikminAccessPassword", inputPassword);
-        $("passwordInput").value = "";
-        setAccessMode(result.role);
-
-        await refreshReports({ force: true });
-
-        $("loginDialog").close();
-        loginStatus.textContent = "";
-        showToast(result.role === "admin" ? "已進入 Admin 管理模式" : "已進入私田模式");
-      } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = "登入";
+      if (!result.success || !["private", "admin"].includes(result.role)) {
+        alert(result.message || "密碼錯誤。");
+        return;
       }
+
+      accessPassword = inputPassword;
+      sessionStorage.setItem("pikminAccessPassword", inputPassword);
+      $("passwordInput").value = "";
+      $("loginDialog").close();
+      setAccessMode(result.role);
+
+      await refreshReports({ force: true });
+      showToast(result.role === "admin" ? "已進入 Admin 管理模式" : "已進入私田模式");
     });
 
     $("logoutBtn").addEventListener("click", async () => {
