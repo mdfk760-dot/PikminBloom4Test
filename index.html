@@ -959,6 +959,13 @@
     let siteUpdateTimer = null;
     let siteUpdateDetected = false;
 
+    // 前端最後成功資料備援。
+    // 公開田可安全持久保存；私田 / Admin 含私密座標，只保存於目前分頁 session。
+    const PUBLIC_REPORT_CACHE_KEY = "pikminReportsPublicCacheV1";
+    const PROTECTED_REPORT_CACHE_KEY = "pikminReportsProtectedCacheV1";
+    const FRONTEND_CACHE_MAX_AGE = 15 * 60 * 1000;
+    let hasDisplayedReportSnapshot = false;
+
     function hashText(text) {
       let hash = 2166136261;
       for (let i = 0; i < text.length; i++) {
@@ -1039,6 +1046,64 @@
       }, SITE_UPDATE_CHECK_INTERVAL);
     }
 
+
+    function getFrontendReportStorage(role = accessRole) {
+      return role === "public" ? localStorage : sessionStorage;
+    }
+
+    function getFrontendReportCacheKey(role = accessRole) {
+      return role === "public" ? PUBLIC_REPORT_CACHE_KEY : PROTECTED_REPORT_CACHE_KEY;
+    }
+
+    function saveReportsSnapshot(role, reportList) {
+      try {
+        const storage = getFrontendReportStorage(role);
+        const key = getFrontendReportCacheKey(role);
+        storage.setItem(key, JSON.stringify({
+          savedAt: Date.now(),
+          role: role === "public" ? "public" : "protected",
+          reports: Array.isArray(reportList) ? reportList : []
+        }));
+      } catch (error) {
+        console.debug("保存前端公告備援失敗", error);
+      }
+    }
+
+    function restoreReportsSnapshot(role = accessRole) {
+      try {
+        const storage = getFrontendReportStorage(role);
+        const key = getFrontendReportCacheKey(role);
+        const raw = storage.getItem(key);
+        if (!raw) return false;
+
+        const snapshot = JSON.parse(raw);
+        if (!snapshot || !Array.isArray(snapshot.reports) || !Number.isFinite(Number(snapshot.savedAt))) {
+          storage.removeItem(key);
+          return false;
+        }
+
+        if (Date.now() - Number(snapshot.savedAt) > FRONTEND_CACHE_MAX_AGE) {
+          storage.removeItem(key);
+          return false;
+        }
+
+        reports = snapshot.reports;
+        hasDisplayedReportSnapshot = true;
+        renderReports();
+        return true;
+      } catch (error) {
+        console.debug("讀取前端公告備援失敗", error);
+        return false;
+      }
+    }
+
+    function clearProtectedReportsSnapshot() {
+      try {
+        sessionStorage.removeItem(PROTECTED_REPORT_CACHE_KEY);
+      } catch (error) {
+        console.debug("清除私田備援失敗", error);
+      }
+    }
 
     function showToast(message) {
       const toast = $("toast");
@@ -1165,6 +1230,9 @@
         if (accessRole === "private" || accessRole === "admin") {
           res = await fetchWithTimeout(API_URL, {
             method: "POST",
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8"
+            },
             body: JSON.stringify({
               action: "list",
               accessPassword
@@ -1181,22 +1249,34 @@
         const data = await res.json();
 
         if (!data.success) {
-          // 密碼被更改或失效時，自動退出權限模式，避免一直卡在錯誤狀態。
+          // 密碼被更改或失效時，自動退出權限模式。
           if ((accessRole === "private" || accessRole === "admin") && data.code === "INVALID_ACCESS") {
             clearAccessSession();
             setAccessMode("public");
+            restoreReportsSnapshot("public");
             showToast("登入已失效，已切回公開模式");
             return await loadReports();
           }
           throw new Error(data.message || "讀取資料失敗");
         }
 
-        reports = data.reports || [];
+        reports = Array.isArray(data.reports) ? data.reports : [];
+        saveReportsSnapshot(accessRole, reports);
+        hasDisplayedReportSnapshot = true;
         return true;
       } catch (error) {
         console.error(error);
         const timedOut = error && error.name === "AbortError";
-        showToast(timedOut ? "資料載入逾時，稍後會自動重試" : "讀取 Google Sheet 失敗");
+        const hasFallback = hasDisplayedReportSnapshot || restoreReportsSnapshot(accessRole);
+
+        if (hasFallback) {
+          showToast(timedOut
+            ? "連線逾時，目前顯示上次成功資料"
+            : "暫時無法更新，目前顯示上次成功資料");
+        } else {
+          showToast(timedOut ? "資料載入逾時，稍後會自動重試" : "讀取 Google Sheet 失敗");
+        }
+
         return false;
       }
     }
@@ -1292,6 +1372,7 @@
       // 清掉舊版曾使用的登入狀態。
       sessionStorage.removeItem("pikminAdminPassword");
       sessionStorage.removeItem("pikminAdmin");
+      clearProtectedReportsSnapshot();
     }
 
     function setAccessMode(role) {
@@ -2007,7 +2088,9 @@ ${trkptContent}
       $("loginDialog").close();
       setAccessMode(result.role);
 
-      await refreshReports({ force: true });
+      hasDisplayedReportSnapshot = false;
+      const restoredProtected = restoreReportsSnapshot(result.role);
+      await refreshReports({ force: true, showLoading: !restoredProtected });
       showToast(result.role === "admin" ? "已進入 Admin 管理模式" : "已進入私田模式");
     });
 
@@ -2016,7 +2099,9 @@ ${trkptContent}
       clearForm();
       clearAccessSession();
       setAccessMode("public");
-      await refreshReports({ force: true });
+      hasDisplayedReportSnapshot = false;
+      const restoredPublic = restoreReportsSnapshot("public");
+      await refreshReports({ force: true, showLoading: !restoredPublic });
       showToast(wasAdmin ? "已離開 Admin 管理模式" : "已離開私田模式");
     });
 
@@ -2036,18 +2121,19 @@ ${trkptContent}
     let isLoadingReports = false;
     let lastReportsRefreshAt = 0;
 
-    async function refreshReports({ force = false } = {}) {
+    async function refreshReports({ force = false, showLoading = null } = {}) {
       if (!force && document.visibilityState !== "visible") return;
       if (isLoadingReports) return;
 
       isLoadingReports = true;
 
       const loading = $("loadingMessage");
+      const shouldShowLoading = showLoading === null ? !hasDisplayedReportSnapshot : showLoading;
       const loadingBaseText = "🌱 皮克敏正在搬運花田資料，請稍後";
       let loadingDotStep = 1;
       let loadingAnimationTimer = null;
 
-      if (loading) {
+      if (loading && shouldShowLoading) {
         loading.style.display = "block";
         loading.textContent = `${loadingBaseText}.`;
 
@@ -2213,6 +2299,9 @@ ${trkptContent}
       fillOptions();
       enableMobileNoticeDrag();
 
+      // 沒有本分頁登入憑證時，不保留任何私田備援。
+      if (!accessPassword) clearProtectedReportsSnapshot();
+
       if (accessPassword) {
         const result = await verifyAccessPassword(accessPassword);
         if (result.success && ["private", "admin"].includes(result.role)) {
@@ -2225,7 +2314,9 @@ ${trkptContent}
         setAccessMode("public");
       }
 
-      await refreshReports({ force: true });
+      hasDisplayedReportSnapshot = false;
+      const restoredSnapshot = restoreReportsSnapshot(accessRole);
+      await refreshReports({ force: true, showLoading: !restoredSnapshot });
       startReportsRefreshTimer();
       startSiteUpdateTimer();
     }
