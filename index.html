@@ -6,12 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>妖妖開花公告</title>
-  <meta name="description" content="妖妖開花公告｜獻花獻果平台。">
+  <meta name="description" content="妖妖開花公告｜查看最新開花預報、可收果花田與座標資訊。">
 
   <meta property="og:type" content="website">
   <meta property="og:title" content="妖妖開花公告">
-  <meta property="og:description" content="獻花獻果平台。">
-  <meta property="og:url" content="https://mdfk760-dot.github.io/PikminBloom/">
+  <meta property="og:description" content="查看最新開花預報、可收果花田與座標資訊。">
+  <meta property="og:url" content="https://mdfk760-dot.github.io/PikminBooom/">
 
   <style>
 	  
@@ -807,7 +807,7 @@
 
   <header>
     <h1>🌸 妖妖開花公告</h1>
-    <p>管理員分享開花成果，用戶一鍵複製座標。</p>
+    <p>Admin 分享開花成果，User 一鍵複製座標。</p>
   </header>
 
   <main class="wrap">
@@ -1207,10 +1207,11 @@
     }
 
     const REPORT_FETCH_TIMEOUT = 15000;
+    const ACCESS_VERIFY_TIMEOUTS = [12000, 25000];
 
-    async function fetchWithTimeout(url, options = {}) {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = REPORT_FETCH_TIMEOUT) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REPORT_FETCH_TIMEOUT);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
         return await fetch(url, {
@@ -1221,6 +1222,10 @@
       } finally {
         clearTimeout(timeoutId);
       }
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function loadReports() {
@@ -1281,30 +1286,55 @@
       }
     }
 
-    async function verifyAccessPassword(password) {
-      try {
-        const res = await fetchWithTimeout(API_URL, {
-          method: "POST",
-          body: JSON.stringify({
-            action: "verify",
-            accessPassword: password
-          })
-        });
+    async function verifyAccessPasswordOnce(password, timeoutMs) {
+      const res = await fetchWithTimeout(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({
+          action: "verify",
+          accessPassword: password
+        })
+      }, timeoutMs);
 
-        const data = await res.json();
-        return {
-          success: !!data.success,
-          role: data.role || "public",
-          message: data.message || ""
-        };
-      } catch (error) {
-        console.error(error);
-        return {
-          success: false,
-          role: "public",
-          message: "無法驗證密碼，請確認 Apps Script 已重新部署。"
-        };
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
+
+      const data = await res.json();
+      return {
+        success: !!data.success,
+        role: data.role || "public",
+        message: data.message || ""
+      };
+    }
+
+    async function verifyAccessPassword(password) {
+      let lastError = null;
+
+      for (let attempt = 0; attempt < ACCESS_VERIFY_TIMEOUTS.length; attempt++) {
+        try {
+          // 第一次逾時或網路暫時失敗時自動再試一次，使用者不用重新輸入密碼。
+          return await verifyAccessPasswordOnce(password, ACCESS_VERIFY_TIMEOUTS[attempt]);
+        } catch (error) {
+          lastError = error;
+          console.warn(`登入驗證第 ${attempt + 1} 次失敗`, error);
+
+          if (attempt < ACCESS_VERIFY_TIMEOUTS.length - 1) {
+            await wait(600);
+          }
+        }
+      }
+
+      const timedOut = lastError && lastError.name === "AbortError";
+      return {
+        success: false,
+        role: "public",
+        message: timedOut
+          ? "驗證逾時，Google Apps Script 暫時回應較慢，請稍後再試。"
+          : "暫時無法連線驗證，請稍後再試。"
+      };
     }
 
     async function saveReportToSheet(report) {
@@ -1492,7 +1522,7 @@
       "✗ 收果後請刪檔避免開錯檔誤踩",
       "✓ 開花後僅第𝟏小時會有果實",
       "✓ 花瓣不夠可只派𝟏皮種花",
-      "https://mdfk760-dot.github.io/PikminBloom/"
+      "https://mdfk760-dot.github.io/PikminBooom/"
     ].join("\n");
 
     function removeCopyNoticeFooter(text) {
@@ -2075,7 +2105,18 @@ ${trkptContent}
         return;
       }
 
-      const result = await verifyAccessPassword(inputPassword);
+      const loginBtn = $("confirmLoginBtn");
+      const originalLoginText = loginBtn.textContent;
+      loginBtn.disabled = true;
+      loginBtn.textContent = "驗證中…";
+
+      let result;
+      try {
+        result = await verifyAccessPassword(inputPassword);
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = originalLoginText;
+      }
 
       if (!result.success || !["private", "admin"].includes(result.role)) {
         alert(result.message || "密碼錯誤。");
